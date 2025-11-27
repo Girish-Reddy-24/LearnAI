@@ -7,5 +7,5 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
-  base: '/YOUR-REPO-NAME/',
+  base: '/LearnAI/',
 });
