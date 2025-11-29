@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { generateIntelligentResponse } from "./responses.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -122,10 +123,10 @@ Guidelines:
         aiResponse = data.choices[0].message.content;
       } catch (error) {
         console.error("Error calling OpenAI:", error);
-        aiResponse = `I apologize, but I'm having trouble connecting to my AI service right now. However, I can still help! Regarding "${question}": This is an important topic. Let me provide a general overview: The concept involves understanding the fundamental principles and how they apply in practice. I'd recommend reviewing the course materials and trying some hands-on examples. Feel free to ask more specific questions, and I'll do my best to help!`;
+        aiResponse = generateIntelligentResponse(question, courseInfo);
       }
     } else {
-      aiResponse = `Great question! Let me help you understand "${question}" better.\n\n**Core Concept:**\n${courseInfo ? `In the context of ${courseInfo.split(":")[1]?.split(".")[0] || "this course"},` : ""} This concept is fundamental to understanding the broader topic. Think of it as a building block that connects to other important ideas you'll encounter.\n\n**Practical Application:**\nIn real-world scenarios, this knowledge helps you make informed decisions and solve problems effectively. The key is to understand not just the \"what\" but also the \"why\" behind it.\n\n**Next Steps:**\n- Review related course materials\n- Try applying this concept to practice problems\n- Connect it to topics you've already learned\n\nWould you like me to elaborate on any specific aspect or provide more examples?`;
+      aiResponse = generateIntelligentResponse(question, courseInfo);
     }
 
     const response = {
