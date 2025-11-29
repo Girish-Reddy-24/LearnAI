@@ -133,7 +133,12 @@ class ApiService {
     return this.fetchApi<Course[]>(`/api/courses/category/${category}`);
   }
 
-  async askAITutor(question: string, courseId?: string, context?: string): Promise<AITutorResponse> {
+  async askAITutor(
+    question: string,
+    courseId?: string,
+    context?: string,
+    conversationHistory?: Array<{ role: string; content: string }>
+  ): Promise<AITutorResponse> {
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session) {
@@ -146,7 +151,12 @@ class ApiService {
         'Authorization': `Bearer ${session.access_token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ question, courseId, context }),
+      body: JSON.stringify({
+        question,
+        courseId,
+        context,
+        conversationHistory
+      }),
     });
 
     if (!response.ok) {

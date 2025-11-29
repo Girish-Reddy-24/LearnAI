@@ -517,12 +517,24 @@ I'm here to help you succeed in your learning journey!`;
     if (!input.trim() || loading) return;
 
     const userMessage: Message = { role: 'user', content: input.trim() };
-    setMessages(prev => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInput('');
     setLoading(true);
 
     try {
-      const result = await apiService.askAITutor(userMessage.content);
+      const conversationHistory = updatedMessages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
+      const result = await apiService.askAITutor(
+        userMessage.content,
+        undefined,
+        undefined,
+        conversationHistory
+      );
+
       const aiMessage: Message = {
         role: 'assistant',
         content: result.response
