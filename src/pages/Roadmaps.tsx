@@ -1,407 +1,245 @@
-import { useState } from 'react';
-import { Map, CheckCircle2, Circle, Lock, Award, Clock, BookOpen } from 'lucide-react';
-import { useRouter } from '../components/Router';
+import { useState, useEffect } from 'react';
+import { Map, TrendingUp, DollarSign, MapPin, Briefcase, CheckCircle, ArrowRight } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 
-interface RoadmapStep {
+interface CareerRecommendation {
   id: string;
-  title: string;
-  description: string;
-  courses: string[];
-  duration: string;
-  completed?: boolean;
+  job_title: string;
+  company: string;
+  location: string;
+  salary_range: string;
+  match_score: number;
+  required_skills: string[];
 }
-
-interface CareerRoadmap {
-  id: string;
-  title: string;
-  description: string;
-  salary: string;
-  demand: string;
-  steps: RoadmapStep[];
-  totalDuration: string;
-}
-
-const roadmaps: CareerRoadmap[] = [
-  {
-    id: 'ml-engineer',
-    title: 'Machine Learning Engineer',
-    description: 'Build intelligent systems that learn from data. Work on cutting-edge AI projects and deploy ML models at scale.',
-    salary: '$120k - $180k',
-    demand: 'Very High',
-    totalDuration: '9-12 months',
-    steps: [
-      {
-        id: 'step-1',
-        title: 'Programming Foundations',
-        description: 'Master Python programming and essential data science libraries',
-        courses: ['Python Programming for Data Science'],
-        duration: '8 weeks',
-      },
-      {
-        id: 'step-2',
-        title: 'Machine Learning Fundamentals',
-        description: 'Learn core ML algorithms, model training, and evaluation',
-        courses: ['Machine Learning Fundamentals'],
-        duration: '12 weeks',
-      },
-      {
-        id: 'step-3',
-        title: 'Deep Learning & Neural Networks',
-        description: 'Advanced neural networks, CNNs, RNNs, and modern architectures',
-        courses: ['Deep Learning with TensorFlow'],
-        duration: '14 weeks',
-      },
-      {
-        id: 'step-4',
-        title: 'Specialization: Generative AI',
-        description: 'Master cutting-edge generative models and LLMs',
-        courses: ['Generative AI & Large Language Models'],
-        duration: '10 weeks',
-      },
-    ],
-  },
-  {
-    id: 'data-engineer',
-    title: 'Data Engineer',
-    description: 'Design and build data infrastructure, pipelines, and systems that enable data-driven decision making.',
-    salary: '$110k - $160k',
-    demand: 'Very High',
-    totalDuration: '7-10 months',
-    steps: [
-      {
-        id: 'step-1',
-        title: 'Programming & SQL Basics',
-        description: 'Foundation in programming and database management',
-        courses: ['Python Programming for Data Science', 'Data Analysis with SQL & Tableau'],
-        duration: '10 weeks',
-      },
-      {
-        id: 'step-2',
-        title: 'Data Engineering Core',
-        description: 'ETL pipelines, data warehousing, and big data tools',
-        courses: ['Data Engineering Essentials'],
-        duration: '10 weeks',
-      },
-      {
-        id: 'step-3',
-        title: 'Advanced Data Processing',
-        description: 'Distributed systems, streaming, and real-time processing',
-        courses: ['Machine Learning Fundamentals'],
-        duration: '12 weeks',
-      },
-    ],
-  },
-  {
-    id: 'data-analyst',
-    title: 'Data Analyst',
-    description: 'Extract insights from data, create visualizations, and help businesses make informed decisions.',
-    salary: '$70k - $110k',
-    demand: 'High',
-    totalDuration: '5-7 months',
-    steps: [
-      {
-        id: 'step-1',
-        title: 'Data Analysis Foundations',
-        description: 'SQL, statistical analysis, and data visualization',
-        courses: ['Data Analysis with SQL & Tableau'],
-        duration: '6 weeks',
-      },
-      {
-        id: 'step-2',
-        title: 'Python for Analysis',
-        description: 'Data manipulation and analysis with Python',
-        courses: ['Python Programming for Data Science'],
-        duration: '8 weeks',
-      },
-      {
-        id: 'step-3',
-        title: 'Advanced Analytics',
-        description: 'Predictive modeling and machine learning basics',
-        courses: ['Machine Learning Fundamentals'],
-        duration: '12 weeks',
-      },
-    ],
-  },
-  {
-    id: 'uiux-designer',
-    title: 'UI/UX Designer',
-    description: 'Create beautiful, user-friendly interfaces and delightful user experiences for digital products.',
-    salary: '$80k - $130k',
-    demand: 'High',
-    totalDuration: '4-6 months',
-    steps: [
-      {
-        id: 'step-1',
-        title: 'Design Fundamentals',
-        description: 'UI/UX principles, wireframing, and prototyping',
-        courses: ['UI/UX Design Masterclass'],
-        duration: '8 weeks',
-      },
-      {
-        id: 'step-2',
-        title: 'Frontend Basics',
-        description: 'Understanding web technologies and implementation',
-        courses: ['Full Stack Web Development'],
-        duration: '8 weeks (frontend modules)',
-      },
-      {
-        id: 'step-3',
-        title: 'Advanced Design Systems',
-        description: 'Building scalable design systems and working with development teams',
-        courses: ['UI/UX Design Masterclass'],
-        duration: '4 weeks',
-      },
-    ],
-  },
-  {
-    id: 'fullstack-developer',
-    title: 'Full Stack Developer',
-    description: 'Build complete web applications from frontend to backend, databases to deployment.',
-    salary: '$90k - $150k',
-    demand: 'Very High',
-    totalDuration: '6-9 months',
-    steps: [
-      {
-        id: 'step-1',
-        title: 'Programming Foundations',
-        description: 'Core programming concepts and Python basics',
-        courses: ['Python Programming for Data Science'],
-        duration: '8 weeks',
-      },
-      {
-        id: 'step-2',
-        title: 'Full Stack Development',
-        description: 'Frontend, backend, databases, and deployment',
-        courses: ['Full Stack Web Development'],
-        duration: '16 weeks',
-      },
-      {
-        id: 'step-3',
-        title: 'UI/UX Skills',
-        description: 'Design principles for better user experiences',
-        courses: ['UI/UX Design Masterclass'],
-        duration: '8 weeks',
-      },
-    ],
-  },
-];
 
 export default function Roadmaps() {
-  const { navigate } = useRouter();
-  const [selectedRoadmap, setSelectedRoadmap] = useState<string | null>(null);
+  const { profile } = useAuth();
+  const [careers, setCareers] = useState<CareerRecommendation[]>([]);
+  const [pathways, setPathways] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'careers' | 'pathways'>('careers');
 
-  const selectedRoadmapData = roadmaps.find(r => r.id === selectedRoadmap);
+  useEffect(() => {
+    if (profile) {
+      loadCareerData();
+    }
+  }, [profile]);
+
+  const loadCareerData = async () => {
+    try {
+      const [careersResult, pathwaysResult] = await Promise.all([
+        supabase
+          .from('career_recommendations')
+          .select('*')
+          .eq('student_id', profile?.id)
+          .order('match_score', { ascending: false })
+          .limit(12),
+        supabase
+          .from('learning_pathways')
+          .select('*')
+          .eq('student_id', profile?.id)
+          .order('created_at', { ascending: false })
+          .limit(6)
+      ]);
+
+      if (careersResult.data) setCareers(careersResult.data);
+      if (pathwaysResult.data) setPathways(pathwaysResult.data);
+    } catch (error) {
+      console.error('Error loading career data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Career Roadmaps</h1>
-        <p className="text-gray-600">
-          Follow structured learning paths designed to help you land your dream job
-        </p>
+        <p className="text-gray-600">Explore career paths and personalized recommendations</p>
       </div>
 
-      {!selectedRoadmap ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {roadmaps.map((roadmap) => (
-            <div
-              key={roadmap.id}
-              className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition cursor-pointer"
-              onClick={() => setSelectedRoadmap(roadmap.id)}
-            >
-              <div className="p-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center mb-4">
-                  <Map className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">{roadmap.title}</h3>
-                <p className="text-sm text-gray-600 mb-4">{roadmap.description}</p>
+      <div className="flex gap-4 mb-8">
+        <button
+          onClick={() => setActiveTab('careers')}
+          className={`px-6 py-3 rounded-lg font-medium transition flex items-center ${
+            activeTab === 'careers'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          <Briefcase className="w-4 h-4 mr-2" />
+          Career Opportunities
+        </button>
+        <button
+          onClick={() => setActiveTab('pathways')}
+          className={`px-6 py-3 rounded-lg font-medium transition flex items-center ${
+            activeTab === 'pathways'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          <Map className="w-4 h-4 mr-2" />
+          Learning Pathways
+        </button>
+      </div>
 
-                <div className="space-y-3 mb-4">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Average Salary</span>
-                    <span className="font-semibold text-green-600">{roadmap.salary}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Job Demand</span>
-                    <span className={`font-semibold ${
-                      roadmap.demand === 'Very High' ? 'text-red-600' : 'text-orange-600'
-                    }`}>
-                      {roadmap.demand}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Duration</span>
-                    <span className="font-semibold text-gray-900">{roadmap.totalDuration}</span>
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-gray-200">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <BookOpen className="w-4 h-4 mr-2" />
-                    <span>{roadmap.steps.length} learning phases</span>
-                  </div>
-                </div>
-              </div>
+      {activeTab === 'careers' ? (
+        <>
+          {careers.length === 0 ? (
+            <div className="text-center py-16 bg-white rounded-2xl border border-gray-200">
+              <Briefcase className="w-20 h-20 text-gray-400 mx-auto mb-4" />
+              <h2 className="text-2xl font-semibold text-gray-900 mb-2">No Career Recommendations</h2>
+              <p className="text-gray-600">Complete courses to unlock personalized career recommendations</p>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div>
-          <button
-            onClick={() => setSelectedRoadmap(null)}
-            className="mb-6 text-blue-600 hover:text-blue-700 font-medium"
-          >
-            ← Back to all roadmaps
-          </button>
-
-          <div className="bg-gradient-to-br from-blue-600 to-cyan-600 rounded-xl p-8 text-white mb-8">
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <h2 className="text-3xl font-bold mb-3">{selectedRoadmapData?.title}</h2>
-                <p className="text-blue-100 mb-6 max-w-2xl">
-                  {selectedRoadmapData?.description}
-                </p>
-                <div className="flex flex-wrap gap-6">
-                  <div>
-                    <div className="text-blue-200 text-sm mb-1">Average Salary</div>
-                    <div className="text-xl font-bold">{selectedRoadmapData?.salary}</div>
-                  </div>
-                  <div>
-                    <div className="text-blue-200 text-sm mb-1">Job Demand</div>
-                    <div className="text-xl font-bold">{selectedRoadmapData?.demand}</div>
-                  </div>
-                  <div>
-                    <div className="text-blue-200 text-sm mb-1">Total Duration</div>
-                    <div className="text-xl font-bold">{selectedRoadmapData?.totalDuration}</div>
-                  </div>
-                </div>
-              </div>
-              <Award className="w-16 h-16 opacity-20" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-8">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">Learning Path</h3>
-
-            <div className="space-y-6">
-              {selectedRoadmapData?.steps.map((step, index) => {
-                const isCompleted = step.completed;
-                const isLocked = index > 0 && !selectedRoadmapData.steps[index - 1].completed;
-
-                return (
-                  <div key={step.id} className="relative">
-                    {index < selectedRoadmapData.steps.length - 1 && (
-                      <div className="absolute left-6 top-16 bottom-0 w-0.5 bg-gray-200"></div>
-                    )}
-
-                    <div className={`relative flex gap-4 p-6 rounded-xl border-2 transition ${
-                      isCompleted
-                        ? 'border-green-200 bg-green-50'
-                        : isLocked
-                        ? 'border-gray-200 bg-gray-50 opacity-60'
-                        : 'border-blue-200 bg-blue-50'
-                    }`}>
-                      <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
-                        isCompleted
-                          ? 'bg-green-500'
-                          : isLocked
-                          ? 'bg-gray-300'
-                          : 'bg-blue-500'
-                      }`}>
-                        {isCompleted ? (
-                          <CheckCircle2 className="w-6 h-6 text-white" />
-                        ) : isLocked ? (
-                          <Lock className="w-6 h-6 text-white" />
-                        ) : (
-                          <Circle className="w-6 h-6 text-white" />
-                        )}
-                      </div>
-
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <div className="text-sm font-medium text-gray-500 mb-1">
-                              Phase {index + 1}
-                            </div>
-                            <h4 className="text-xl font-bold text-gray-900 mb-2">
-                              {step.title}
-                            </h4>
-                            <p className="text-gray-600 mb-4">{step.description}</p>
-                          </div>
-                          <div className="flex items-center text-sm text-gray-600">
-                            <Clock className="w-4 h-4 mr-1" />
-                            {step.duration}
-                          </div>
-                        </div>
-
-                        <div className="mb-4">
-                          <div className="text-sm font-medium text-gray-700 mb-2">
-                            Required Courses:
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {step.courses.map((course, idx) => (
-                              <span
-                                key={idx}
-                                className="px-3 py-1 bg-white border border-gray-300 rounded-full text-sm text-gray-700"
-                              >
-                                {course}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-
-                        {!isLocked && !isCompleted && (
-                          <button
-                            onClick={() => navigate('courses')}
-                            className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition"
-                          >
-                            Start Learning
-                          </button>
-                        )}
-
-                        {isCompleted && (
-                          <div className="flex items-center text-green-600 font-medium">
-                            <CheckCircle2 className="w-5 h-5 mr-2" />
-                            Completed
-                          </div>
-                        )}
-
-                        {isLocked && (
-                          <div className="flex items-center text-gray-500">
-                            <Lock className="w-5 h-5 mr-2" />
-                            Complete previous phase to unlock
-                          </div>
-                        )}
-                      </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {careers.map((career) => (
+                <div
+                  key={career.id}
+                  className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="bg-blue-100 p-3 rounded-xl">
+                      <Briefcase className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <div className="flex items-center bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
+                      <TrendingUp className="w-3 h-3 mr-1" />
+                      {Math.round(career.match_score * 100)}% Match
                     </div>
                   </div>
-                );
-              })}
-            </div>
 
-            <div className="mt-8 p-6 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl border border-yellow-200">
-              <div className="flex items-start gap-4">
-                <Award className="w-12 h-12 text-yellow-600 flex-shrink-0" />
-                <div>
-                  <h4 className="text-lg font-bold text-gray-900 mb-2">
-                    Earn Your Certification
-                  </h4>
-                  <p className="text-gray-700 text-sm mb-4">
-                    Complete all phases of this roadmap to earn an industry-recognized certification
-                    and demonstrate your expertise to potential employers.
-                  </p>
-                  <button
-                    onClick={() => navigate('certifications')}
-                    className="bg-yellow-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-yellow-700 transition"
-                  >
-                    View Certification Details
+                  <h3 className="text-lg font-bold text-gray-900 mb-2">{career.job_title}</h3>
+                  <p className="text-sm text-gray-600 mb-3">{career.company}</p>
+
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center text-sm text-gray-600">
+                      <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
+                      <span>{career.location}</span>
+                    </div>
+                    <div className="flex items-center text-sm font-semibold text-green-600">
+                      <DollarSign className="w-4 h-4 mr-2 flex-shrink-0" />
+                      <span>{career.salary_range}</span>
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <p className="text-xs font-semibold text-gray-700 mb-2">Required Skills:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(career.required_skills || []).slice(0, 4).map((skill, idx) => (
+                        <span
+                          key={idx}
+                          className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium flex items-center justify-center">
+                    View Details
+                    <ArrowRight className="w-4 h-4 ml-2" />
                   </button>
                 </div>
+              ))}
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          {pathways.length === 0 ? (
+            <div className="text-center py-16 bg-white rounded-2xl border border-gray-200">
+              <Map className="w-20 h-20 text-gray-400 mx-auto mb-4" />
+              <h2 className="text-2xl font-semibold text-gray-900 mb-2">No Learning Pathways</h2>
+              <p className="text-gray-600">Learning pathways will be created based on your goals</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {pathways.map((pathway) => (
+                <div
+                  key={pathway.id}
+                  className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border-2 border-blue-200 p-6 hover:shadow-lg transition"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="bg-blue-600 p-3 rounded-xl">
+                      <Map className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-blue-600">{pathway.progress}%</div>
+                      <div className="text-xs text-gray-600">Complete</div>
+                    </div>
+                  </div>
+
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">{pathway.pathway_name}</h3>
+                  <p className="text-sm text-gray-600 mb-4">{pathway.description}</p>
+
+                  {pathway.target_completion_date && (
+                    <div className="flex items-center text-sm text-gray-600 mb-4">
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      <span>
+                        Target: {new Date(pathway.target_completion_date).toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="bg-white rounded-lg p-3 mb-4">
+                    <div className="text-xs text-gray-500 mb-1">Progress</div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full transition-all"
+                        style={{ width: `${pathway.progress}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <button className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium">
+                    Continue Learning
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      <div className="mt-12 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 text-white">
+        <div className="flex items-start gap-6">
+          <div className="bg-white/20 p-4 rounded-xl">
+            <Map className="w-8 h-8" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-2xl font-bold mb-2">Your Career Journey</h3>
+            <p className="text-blue-100 mb-4">
+              Our AI analyzes your skills, interests, and learning progress to recommend the best career paths and opportunities for you.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+              <div className="bg-white/10 rounded-lg p-4">
+                <div className="text-3xl font-bold mb-1">{careers.length}</div>
+                <div className="text-sm text-blue-100">Career Opportunities</div>
+              </div>
+              <div className="bg-white/10 rounded-lg p-4">
+                <div className="text-3xl font-bold mb-1">{pathways.length}</div>
+                <div className="text-sm text-blue-100">Learning Pathways</div>
+              </div>
+              <div className="bg-white/10 rounded-lg p-4">
+                <div className="text-3xl font-bold mb-1">
+                  {Math.round(pathways.reduce((acc, p) => acc + p.progress, 0) / (pathways.length || 1))}%
+                </div>
+                <div className="text-sm text-blue-100">Avg Progress</div>
               </div>
             </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

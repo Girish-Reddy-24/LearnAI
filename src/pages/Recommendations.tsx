@@ -1,26 +1,77 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, BookOpen, Star, Clock, BarChart } from 'lucide-react';
-import { apiService } from '../lib/api';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Recommendations() {
+  const { profile } = useAuth();
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [userStats, setUserStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadRecommendations();
-  }, []);
+    if (profile) {
+      loadRecommendations();
+      loadUserStats();
+    }
+  }, [profile]);
 
   const loadRecommendations = async () => {
     try {
-      const result = await apiService.getRecommendations();
-      setRecommendations(result.recommendations || []);
-      setUserStats(result.user_stats || null);
+      const { data, error } = await supabase
+        .from('content_recommendations')
+        .select(`
+          *,
+          courses:course_id (
+            id,
+            title,
+            description,
+            category,
+            difficulty_level,
+            duration
+          )
+        `)
+        .eq('student_id', profile?.id)
+        .order('confidence_score', { ascending: false })
+        .limit(9);
+
+      if (error) throw error;
+
+      const formattedRecs = (data || []).map(rec => ({
+        ...rec.courses,
+        match_score: Math.round((rec.confidence_score || 0.8) * 100),
+        recommendation_reason: rec.recommendation_reason
+      }));
+
+      setRecommendations(formattedRecs);
     } catch (error) {
       console.error('Error loading recommendations:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadUserStats = async () => {
+    try {
+      const { data: enrollments } = await supabase
+        .from('enrollments')
+        .select('progress, courses:course_id(category)')
+        .eq('student_id', profile?.id);
+
+      if (enrollments) {
+        const avgProgress = enrollments.length > 0
+          ? Math.round(enrollments.reduce((acc, e) => acc + e.progress, 0) / enrollments.length)
+          : 0;
+        const categories = new Set(enrollments.map((e: any) => e.courses?.category).filter(Boolean));
+
+        setUserStats({
+          enrolled_courses: enrollments.length,
+          average_progress: avgProgress,
+          categories_explored: categories.size
+        });
+      }
+    } catch (error) {
+      console.error('Error loading user stats:', error);
     }
   };
 
