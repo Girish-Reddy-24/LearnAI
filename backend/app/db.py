@@ -555,3 +555,41 @@ def initialize_database():
     print(f"  - {len(study_activities)} study activities")
     print(f"  - {len(recommendations)} recommendations")
     print(f"  - {len(career_paths)} career paths")
+
+
+# ============================================
+# SIMPLE PERSIST FUNCTIONS FOR AI SESSIONS & NOTIFICATIONS
+# ============================================
+def add_ai_session(student_id: int, session_type: str, input_summary: str, response_summary: str) -> Dict:
+    """Store a simple AI session log"""
+    sid = get_next_id('ai_session_logs')
+    ai_session_logs[sid] = {
+        'id': sid,
+        'student_id': student_id,
+        'session_type': session_type,
+        'input_summary': input_summary,
+        'response_summary': response_summary,
+        'created_at': datetime.now()
+    }
+    return ai_session_logs[sid]
+
+
+# Notifications storage (re-using 'study_activities' dict for simplicity)
+notifications: Dict[int, Dict[str, Any]] = {}
+next_id['notifications'] = next_id.get('notifications', max(next_id.values())+1)
+
+def add_notification(student_id: int, title: str, message: str, due_date: Optional[date] = None) -> Dict:
+    nid = get_next_id('notifications')
+    notifications[nid] = {
+        'id': nid,
+        'student_id': student_id,
+        'title': title,
+        'message': message,
+        'due_date': due_date,
+        'created_at': datetime.now(),
+        'is_read': False
+    }
+    return notifications[nid]
+
+def get_notifications_for_student(student_id: int) -> List[Dict[str, Any]]:
+    return [n for n in notifications.values() if n['student_id'] == student_id]

@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 
 from app.models import HealthResponse
 from app import db
-from app.routers import students, dashboard, courses, ai, careers
+from app.routers import students, dashboard, courses, ai, careers, notifications
 
 
 # ============================================
