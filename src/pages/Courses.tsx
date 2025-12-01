@@ -104,6 +104,7 @@ export default function Courses() {
   const [view, setView] = useState<'my-courses' | 'available'>('my-courses');
   const [selectedCourse, setSelectedCourse] = useState<any>(null);
   const [dbCourses, setDbCourses] = useState<any[]>([]);
+  const [enrolling, setEnrolling] = useState<string | null>(null);
 
   const categories = ['All', 'Machine Learning', 'Artificial Intelligence', 'Programming', 'Data Engineering', 'Web Development', 'Design', 'Data Analysis', 'Data Science', 'Computer Science', 'Security', 'Cloud'];
 
@@ -174,14 +175,16 @@ export default function Courses() {
   };
 
   const handleEnroll = async (course: any) => {
+    const courseId = course.id;
+
+    if (!courseId) {
+      alert('Invalid course');
+      return;
+    }
+
+    setEnrolling(courseId);
+
     try {
-      const courseId = course.id;
-
-      if (!courseId) {
-        alert('Invalid course');
-        return;
-      }
-
       const { data: existing } = await supabase
         .from('enrollments')
         .select('id')
@@ -192,6 +195,7 @@ export default function Courses() {
       if (existing) {
         alert('You are already enrolled in this course!');
         setView('my-courses');
+        setEnrolling(null);
         return;
       }
 
@@ -211,12 +215,17 @@ export default function Courses() {
         throw error;
       }
 
-      alert('Successfully enrolled! Check "My Courses" to start watching videos.');
       await loadEnrollments();
-      setView('my-courses');
+
+      setTimeout(() => {
+        setView('my-courses');
+        setEnrolling(null);
+      }, 500);
+
     } catch (error: any) {
       console.error('Error enrolling in course:', error);
       alert(`Failed to enroll: ${error.message || 'Please try again'}`);
+      setEnrolling(null);
     }
   };
 
@@ -446,10 +455,20 @@ export default function Courses() {
 
                   <button
                     onClick={() => handleEnroll(course)}
-                    className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition inline-flex items-center justify-center"
+                    disabled={enrolling === course.id}
+                    className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition inline-flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Play className="w-4 h-4 mr-2" />
-                    Enroll Now
+                    {enrolling === course.id ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Enrolling...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-4 h-4 mr-2" />
+                        Enroll Now
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
