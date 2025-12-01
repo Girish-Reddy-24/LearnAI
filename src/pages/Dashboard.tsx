@@ -37,7 +37,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             id,
             title,
             description,
-            difficulty_level,
+            level,
             category,
             duration
           )
@@ -50,7 +50,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       if (data) {
         const completed = data.filter(e => e.status === 'completed').length;
         const avgProgress = data.length > 0
-          ? data.reduce((acc, e) => acc + e.progress, 0) / data.length
+          ? data.reduce((acc, e) => acc + (e.progress_percent || 0), 0) / data.length
           : 0;
 
         setStats({
@@ -170,15 +170,15 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                           {enrollment.courses?.title || 'Untitled Course'}
                         </h3>
                         <div className="flex gap-2">
-                          {enrollment.courses?.difficulty_level && (
+                          {enrollment.courses?.level && (
                             <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                              enrollment.courses.difficulty_level === 'beginner'
+                              enrollment.courses.level === 'Beginner'
                                 ? 'bg-green-100 text-green-700'
-                                : enrollment.courses.difficulty_level === 'intermediate'
+                                : enrollment.courses.level === 'Intermediate'
                                 ? 'bg-yellow-100 text-yellow-700'
                                 : 'bg-red-100 text-red-700'
                             }`}>
-                              {enrollment.courses.difficulty_level}
+                              {enrollment.courses.level}
                             </span>
                           )}
                           <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
@@ -198,12 +198,12 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     </div>
                     <div className="flex items-center justify-between text-sm mb-2">
                       <span className="text-gray-600">Progress</span>
-                      <span className="font-semibold text-gray-900">{enrollment.progress}%</span>
+                      <span className="font-semibold text-gray-900">{enrollment.progress_percent}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
                         className="bg-blue-600 h-2 rounded-full transition-all"
-                        style={{ width: `${enrollment.progress}%` }}
+                        style={{ width: `${enrollment.progress_percent}%` }}
                       ></div>
                     </div>
                   </div>
@@ -342,12 +342,12 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                         </div>
                         <div className="flex items-center justify-between text-sm mb-2">
                           <span className="text-gray-600">Progress</span>
-                          <span className="font-semibold text-gray-900">{enrollment.progress}%</span>
+                          <span className="font-semibold text-gray-900">{enrollment.progress_percent}%</span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
                           <div
                             className="bg-blue-600 h-2 rounded-full transition-all"
-                            style={{ width: `${enrollment.progress}%` }}
+                            style={{ width: `${enrollment.progress_percent}%` }}
                           ></div>
                         </div>
                       </div>
@@ -419,21 +419,21 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="text-3xl font-bold text-gray-900">{enrollment.progress}%</div>
+                            <div className="text-3xl font-bold text-gray-900">{enrollment.progress_percent}%</div>
                             <div className="text-xs text-gray-500">Complete</div>
                           </div>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
                           <div
                             className={`h-3 rounded-full transition-all ${
-                              enrollment.progress === 100 ? 'bg-green-600' : 'bg-blue-600'
+                              enrollment.progress_percent === 100 ? 'bg-green-600' : 'bg-blue-600'
                             }`}
-                            style={{ width: `${enrollment.progress}%` }}
+                            style={{ width: `${enrollment.progress_percent}%` }}
                           ></div>
                         </div>
                         <div className="flex justify-between text-xs text-gray-500">
                           <span>Started {new Date(enrollment.enrolled_at).toLocaleDateString()}</span>
-                          {enrollment.progress === 100 && (
+                          {enrollment.progress_percent === 100 && (
                             <span className="text-green-600 font-medium">Completed!</span>
                           )}
                         </div>
@@ -488,14 +488,14 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                             </div>
                             <div className="flex items-center justify-between text-sm mb-2">
                               <span className="text-gray-600">Progress</span>
-                              <span className="font-semibold text-gray-900">{enrollment.progress}%</span>
+                              <span className="font-semibold text-gray-900">{enrollment.progress_percent}%</span>
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-2">
                               <div
                                 className={`h-2 rounded-full transition-all ${
                                   isOverdue ? 'bg-red-600' : isUrgent ? 'bg-orange-600' : 'bg-blue-600'
                                 }`}
-                                style={{ width: `${enrollment.progress}%` }}
+                                style={{ width: `${enrollment.progress_percent}%` }}
                               ></div>
                             </div>
                           </div>
