@@ -31,7 +31,7 @@ export default function Recommendations() {
       let query = supabase
         .from('courses')
         .select('id, title, description, category, level, duration')
-        .is('is_active', true);
+        .eq('is_active', true);
 
       if (enrolledCourseIds.length > 0) {
         query = query.not('id', 'in', `(${enrolledCourseIds.join(',')})`);
@@ -64,18 +64,21 @@ export default function Recommendations() {
 
   const getRelevantCategories = (role: string): string[] => {
     const roleMap: { [key: string]: string[] } = {
-      'data scientist': ['Machine Learning', 'Data Analysis', 'Programming', 'Artificial Intelligence', 'Data Engineering'],
-      'machine learning engineer': ['Machine Learning', 'Artificial Intelligence', 'Programming', 'Data Engineering'],
-      'software engineer': ['Programming', 'Web Development', 'Computer Science'],
-      'web developer': ['Web Development', 'Programming', 'Design'],
-      'ai engineer': ['Artificial Intelligence', 'Machine Learning', 'Programming'],
-      'data analyst': ['Data Analysis', 'Programming', 'Data Engineering'],
-      'data engineer': ['Data Engineering', 'Programming', 'Machine Learning'],
-      'full stack developer': ['Web Development', 'Programming'],
+      'data scientist': ['Machine Learning', 'Data Analysis', 'Programming', 'Artificial Intelligence', 'Data Engineering', 'Data Science'],
+      'machine learning engineer': ['Machine Learning', 'Artificial Intelligence', 'Programming', 'Data Engineering', 'Data Science'],
+      'software engineer': ['Programming', 'Web Development', 'Computer Science', 'Cloud'],
+      'web developer': ['Web Development', 'Programming', 'Design', 'Computer Science'],
+      'ai engineer': ['Artificial Intelligence', 'Machine Learning', 'Programming', 'Data Science'],
+      'data analyst': ['Data Analysis', 'Programming', 'Data Engineering', 'Data Science'],
+      'data engineer': ['Data Engineering', 'Programming', 'Machine Learning', 'Cloud', 'Data Science'],
+      'full stack developer': ['Web Development', 'Programming', 'Computer Science', 'Cloud'],
       'frontend developer': ['Web Development', 'Design', 'Programming'],
-      'backend developer': ['Programming', 'Web Development', 'Data Engineering'],
+      'backend developer': ['Programming', 'Web Development', 'Data Engineering', 'Cloud'],
       'ui/ux designer': ['Design', 'Web Development'],
-      'product manager': ['Data Analysis', 'Design', 'Programming']
+      'product manager': ['Data Analysis', 'Design', 'Programming'],
+      'security engineer': ['Security', 'Programming', 'Computer Science'],
+      'cloud engineer': ['Cloud', 'Programming', 'Data Engineering'],
+      'devops engineer': ['Cloud', 'Programming', 'Computer Science']
     };
 
     const normalizedRole = role.toLowerCase();
@@ -84,7 +87,8 @@ export default function Recommendations() {
         return categories;
       }
     }
-    return [];
+
+    return ['Programming', 'Computer Science', 'Data Science', 'Web Development', 'Machine Learning', 'Artificial Intelligence'];
   };
 
   const getJobRoleReason = (role: string, category: string): string => {
@@ -99,7 +103,11 @@ export default function Recommendations() {
       'Data Engineering': 'Complements your current learning track',
       'Web Development': 'Popular skill with strong job market',
       'Design': 'Creative skill to enhance your portfolio',
-      'Data Analysis': 'Data-driven decision making essential for growth'
+      'Data Analysis': 'Data-driven decision making essential for growth',
+      'Data Science': 'Core skill for data-driven careers',
+      'Computer Science': 'Fundamental knowledge for tech careers',
+      'Security': 'Critical skill for protecting digital assets',
+      'Cloud': 'In-demand skill for modern infrastructure'
     };
     return reasons[category] || 'Recommended based on your learning profile';
   };
@@ -131,7 +139,22 @@ export default function Recommendations() {
   const handleEnroll = async (courseId: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        alert('Please log in to enroll in courses');
+        return;
+      }
+
+      const { data: existing } = await supabase
+        .from('enrollments')
+        .select('id')
+        .eq('student_id', user.id)
+        .eq('course_id', courseId)
+        .maybeSingle();
+
+      if (existing) {
+        alert('You are already enrolled in this course!');
+        return;
+      }
 
       const { error } = await supabase.from('enrollments').insert({
         student_id: user.id,
@@ -140,13 +163,16 @@ export default function Recommendations() {
         status: 'active'
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Enrollment error:', error);
+        throw error;
+      }
 
       await loadRecommendations(selectedRole);
       alert('Successfully enrolled! Check "My Courses" to start learning.');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error enrolling:', error);
-      alert('Failed to enroll. Please try again.');
+      alert(`Failed to enroll: ${error.message || 'Please try again'}`);
     }
   };
 
