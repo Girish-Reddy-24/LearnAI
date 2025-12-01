@@ -96,7 +96,7 @@ const availableCourses = [
 ];
 
 export default function Courses() {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const [enrollments, setEnrollments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -111,17 +111,17 @@ export default function Courses() {
   useEffect(() => {
     loadEnrollments();
     loadDatabaseCourses();
-  }, [profile]);
+  }, [user]);
 
   const loadEnrollments = async () => {
-    if (!profile?.id) {
+    if (!user?.id) {
       setEnrollments([]);
       setLoading(false);
       return;
     }
 
     try {
-      console.log('Loading enrollments for user:', profile.id);
+      console.log('Loading enrollments for user:', user.id);
 
       const { data, error } = await supabase
         .from('enrollments')
@@ -136,7 +136,7 @@ export default function Courses() {
             duration
           )
         `)
-        .eq('student_id', profile.id)
+        .eq('student_id', user.id)
         .order('enrolled_at', { ascending: false });
 
       if (error) throw error;
@@ -205,10 +205,12 @@ export default function Courses() {
     setEnrolling(courseId);
 
     try {
+      console.log('Enrolling user:', user?.id, 'in course:', courseId);
+
       const { data: existing } = await supabase
         .from('enrollments')
         .select('id')
-        .eq('student_id', profile?.id)
+        .eq('student_id', user?.id)
         .eq('course_id', courseId)
         .maybeSingle();
 
@@ -219,16 +221,20 @@ export default function Courses() {
         return;
       }
 
-      const { error } = await supabase
+      console.log('Inserting new enrollment...');
+      const { data: newEnrollment, error } = await supabase
         .from('enrollments')
         .insert([
           {
-            student_id: profile?.id,
+            student_id: user?.id,
             course_id: courseId,
             status: 'active',
             progress_percent: 0,
           }
-        ]);
+        ])
+        .select();
+
+      console.log('Enrollment result:', { newEnrollment, error });
 
       if (error) {
         console.error('Enrollment error:', error);
