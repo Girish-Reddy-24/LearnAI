@@ -114,7 +114,15 @@ export default function Courses() {
   }, [profile]);
 
   const loadEnrollments = async () => {
+    if (!profile?.id) {
+      setEnrollments([]);
+      setLoading(false);
+      return;
+    }
+
     try {
+      console.log('Loading enrollments for user:', profile.id);
+
       const { data, error } = await supabase
         .from('enrollments')
         .select(`
@@ -128,10 +136,12 @@ export default function Courses() {
             duration
           )
         `)
-        .eq('student_id', profile?.id)
+        .eq('student_id', profile.id)
         .order('enrolled_at', { ascending: false });
 
       if (error) throw error;
+
+      console.log('Found enrollments:', data?.length || 0);
 
       const formattedData = (data || []).map(enrollment => ({
         ...enrollment,
@@ -144,6 +154,7 @@ export default function Courses() {
       setEnrollments(formattedData);
     } catch (error) {
       console.error('Error loading enrollments:', error);
+      setEnrollments([]);
     } finally {
       setLoading(false);
     }
