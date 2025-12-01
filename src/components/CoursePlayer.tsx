@@ -20,11 +20,12 @@ interface CoursePlayerProps {
 export default function CoursePlayer({ course, onClose }: CoursePlayerProps) {
   const [currentModule, setCurrentModule] = useState(0);
   const [showAITutor, setShowAITutor] = useState(false);
-  const [completedModules, setCompletedModules] = useState<Set<number>>(new Set([0, 1]));
+  const [completedModules, setCompletedModules] = useState<Set<number>>(new Set());
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(true);
 
   const courseId = course.courses?.id || course.course_id;
+  const enrollmentId = course.id;
 
   useEffect(() => {
     loadModules();
@@ -75,12 +76,37 @@ export default function CoursePlayer({ course, onClose }: CoursePlayerProps) {
     }
   };
 
-  const handleMarkComplete = () => {
+  const handleMarkComplete = async () => {
     setCompletedModules(prev => {
       const newSet = new Set(prev);
       newSet.add(currentModule);
       return newSet;
     });
+
+    await updateProgress();
+  };
+
+  const updateProgress = async () => {
+    if (!enrollmentId || modules.length === 0) return;
+
+    const completedCount = completedModules.size + 1;
+    const progressPercent = Math.round((completedCount / modules.length) * 100);
+
+    try {
+      const { error } = await supabase
+        .from('enrollments')
+        .update({
+          progress_percent: progressPercent,
+          status: progressPercent === 100 ? 'completed' : 'active'
+        })
+        .eq('id', enrollmentId);
+
+      if (error) {
+        console.error('Error updating progress:', error);
+      }
+    } catch (error) {
+      console.error('Error updating progress:', error);
+    }
   };
 
   const currentModuleData = modules[currentModule];
