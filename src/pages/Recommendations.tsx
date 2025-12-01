@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, BookOpen, Star, Clock, BarChart } from 'lucide-react';
+import { TrendingUp, BookOpen, Star, Clock, BarChart, Search, Briefcase, Sparkles } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -8,6 +8,8 @@ export default function Recommendations() {
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [userStats, setUserStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [jobRole, setJobRole] = useState('');
+  const [selectedRole, setSelectedRole] = useState('');
 
   useEffect(() => {
     if (profile) {
@@ -16,8 +18,9 @@ export default function Recommendations() {
     }
   }, [profile]);
 
-  const loadRecommendations = async () => {
+  const loadRecommendations = async (role?: string) => {
     try {
+      setLoading(true);
       const { data: enrolledData } = await supabase
         .from('enrollments')
         .select('course_id')
@@ -25,19 +28,30 @@ export default function Recommendations() {
 
       const enrolledCourseIds = (enrolledData || []).map(e => e.course_id);
 
-      const { data: allCourses, error } = await supabase
+      let query = supabase
         .from('courses')
         .select('id, title, description, category, level, duration')
-        .is('is_active', true)
-        .not('id', 'in', `(${enrolledCourseIds.length > 0 ? enrolledCourseIds.join(',') : 'null'})`)
-        .limit(9);
+        .is('is_active', true);
+
+      if (enrolledCourseIds.length > 0) {
+        query = query.not('id', 'in', `(${enrolledCourseIds.join(',')})`);
+      }
+
+      if (role) {
+        const relevantCategories = getRelevantCategories(role);
+        if (relevantCategories.length > 0) {
+          query = query.in('category', relevantCategories);
+        }
+      }
+
+      const { data: allCourses, error } = await query.limit(12);
 
       if (error) throw error;
 
       const formattedRecs = (allCourses || []).map(course => ({
         ...course,
         match_score: Math.floor(Math.random() * 15) + 85,
-        recommendation_reason: getRecommendationReason(course.category)
+        recommendation_reason: role ? getJobRoleReason(role, course.category) : getRecommendationReason(course.category)
       }));
 
       setRecommendations(formattedRecs);
@@ -46,6 +60,35 @@ export default function Recommendations() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getRelevantCategories = (role: string): string[] => {
+    const roleMap: { [key: string]: string[] } = {
+      'data scientist': ['Machine Learning', 'Data Analysis', 'Programming', 'Artificial Intelligence', 'Data Engineering'],
+      'machine learning engineer': ['Machine Learning', 'Artificial Intelligence', 'Programming', 'Data Engineering'],
+      'software engineer': ['Programming', 'Web Development', 'Computer Science'],
+      'web developer': ['Web Development', 'Programming', 'Design'],
+      'ai engineer': ['Artificial Intelligence', 'Machine Learning', 'Programming'],
+      'data analyst': ['Data Analysis', 'Programming', 'Data Engineering'],
+      'data engineer': ['Data Engineering', 'Programming', 'Machine Learning'],
+      'full stack developer': ['Web Development', 'Programming'],
+      'frontend developer': ['Web Development', 'Design', 'Programming'],
+      'backend developer': ['Programming', 'Web Development', 'Data Engineering'],
+      'ui/ux designer': ['Design', 'Web Development'],
+      'product manager': ['Data Analysis', 'Design', 'Programming']
+    };
+
+    const normalizedRole = role.toLowerCase();
+    for (const [key, categories] of Object.entries(roleMap)) {
+      if (normalizedRole.includes(key) || key.includes(normalizedRole)) {
+        return categories;
+      }
+    }
+    return [];
+  };
+
+  const getJobRoleReason = (role: string, category: string): string => {
+    return `Essential skill for ${role} career path`;
   };
 
   const getRecommendationReason = (category: string) => {
@@ -99,7 +142,7 @@ export default function Recommendations() {
 
       if (error) throw error;
 
-      await loadRecommendations();
+      await loadRecommendations(selectedRole);
       alert('Successfully enrolled! Check "My Courses" to start learning.');
     } catch (error) {
       console.error('Error enrolling:', error);
@@ -118,6 +161,23 @@ export default function Recommendations() {
     );
   }
 
+  const handleJobRoleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (jobRole.trim()) {
+      setSelectedRole(jobRole.trim());
+      loadRecommendations(jobRole.trim());
+    }
+  };
+
+  const popularRoles = [
+    'Data Scientist',
+    'Machine Learning Engineer',
+    'Software Engineer',
+    'Web Developer',
+    'AI Engineer',
+    'Data Analyst'
+  ];
+
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <div className="mb-8">
@@ -127,8 +187,72 @@ export default function Recommendations() {
           </div>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Course Recommendations</h1>
-            <p className="text-gray-600">Discover courses tailored to your interests</p>
+            <p className="text-gray-600">Discover courses tailored to your career goals</p>
           </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
+          <div className="flex items-center space-x-2 mb-4">
+            <Briefcase className="w-5 h-5 text-blue-600" />
+            <h2 className="text-lg font-semibold text-gray-900">Find Courses by Job Role</h2>
+          </div>
+          <form onSubmit={handleJobRoleSearch} className="mb-4">
+            <div className="flex gap-3">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <input
+                  type="text"
+                  value={jobRole}
+                  onChange={(e) => setJobRole(e.target.value)}
+                  placeholder="Enter job role (e.g., Data Scientist, Web Developer)"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <button
+                type="submit"
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+              >
+                <Sparkles className="w-5 h-5" />
+                Get Recommendations
+              </button>
+            </div>
+          </form>
+          <div className="flex flex-wrap gap-2">
+            <span className="text-sm text-gray-600 mr-2">Popular roles:</span>
+            {popularRoles.map((role) => (
+              <button
+                key={role}
+                onClick={() => {
+                  setJobRole(role);
+                  setSelectedRole(role);
+                  loadRecommendations(role);
+                }}
+                className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-full hover:bg-blue-100 hover:text-blue-700 transition"
+              >
+                {role}
+              </button>
+            ))}
+          </div>
+          {selectedRole && (
+            <div className="mt-4 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-blue-600" />
+                <span className="text-sm text-blue-900">
+                  Showing courses for <span className="font-semibold">{selectedRole}</span>
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedRole('');
+                  setJobRole('');
+                  loadRecommendations();
+                }}
+                className="text-sm text-blue-600 hover:text-blue-800 underline"
+              >
+                Clear filter
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
