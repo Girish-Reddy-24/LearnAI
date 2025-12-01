@@ -123,7 +123,7 @@ export default function Courses() {
             id,
             title,
             description,
-            difficulty_level,
+            level,
             category,
             duration
           )
@@ -132,7 +132,16 @@ export default function Courses() {
         .order('enrolled_at', { ascending: false });
 
       if (error) throw error;
-      setEnrollments(data || []);
+
+      const formattedData = (data || []).map(enrollment => ({
+        ...enrollment,
+        courses: enrollment.courses ? {
+          ...enrollment.courses,
+          difficulty_level: enrollment.courses.level || 'intermediate'
+        } : null
+      }));
+
+      setEnrollments(formattedData);
     } catch (error) {
       console.error('Error loading enrollments:', error);
     } finally {
@@ -193,7 +202,7 @@ export default function Courses() {
         .maybeSingle();
 
       if (existing) {
-        alert('You are already enrolled in this course!');
+        console.log('Already enrolled, switching to My Courses');
         setView('my-courses');
         setEnrolling(null);
         return;
@@ -220,7 +229,7 @@ export default function Courses() {
       setTimeout(() => {
         setView('my-courses');
         setEnrolling(null);
-      }, 500);
+      }, 300);
 
     } catch (error: any) {
       console.error('Error enrolling in course:', error);
